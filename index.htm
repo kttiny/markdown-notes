@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Markdown Notes</title>
+<style>
+  body{margin:0;font-family:system-ui;display:flex;height:100vh}
+  #sidebar{width:240px;background:#222;color:#fff;padding:16px;overflow:auto}
+  #sidebar button{width:100%;padding:10px;background:#4a6cf7;color:#fff;border:0;border-radius:6px;cursor:pointer;margin-bottom:12px}
+  .note{padding:8px;border-radius:6px;cursor:pointer;margin-bottom:4px;font-size:14px}
+  .note:hover{background:#333}
+  .note.active{background:#4a6cf7}
+  #main{flex:1;display:flex;flex-direction:column}
+  #editor,#preview{flex:1;padding:20px;overflow:auto;font-size:15px}
+  #editor{border:0;border-bottom:1px solid #ddd;resize:none;font-family:monospace;outline:none}
+  #preview{background:#fafafa}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <button onclick="newNote()">+ Новая заметка</button>
+  <div id="list"></div>
+</div>
+<div id="main">
+  <textarea id="editor" placeholder="Пиши здесь..."></textarea>
+  <div id="preview"></div>
+</div>
+<script>
+let notes = JSON.parse(localStorage.getItem('notes') || '[]');
+let current = 0;
+
+function save(){ localStorage.setItem('notes', JSON.stringify(notes)); }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function md(t){
+  return esc(t)
+    .replace(/^### (.*)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.*)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.*)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/\*(.+?)\*/g,'<i>$1</i>')
+    .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/^- (.*)$/gm,'<li>$1</li>')
+    .replace(/\n/g,'<br>');
+}
+function render(){
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  notes.forEach((n,i)=>{
+    const d = document.createElement('div');
+    d.className = 'note' + (i===current?' active':'');
+    d.textContent = n.title || 'Без названия';
+    d.onclick = ()=>{ current=i; load(); };
+    list.appendChild(d);
+  });
+  load();
+}
+function load(){
+  if(!notes[current]) return;
+  document.getElementById('editor').value = notes[current].text;
+  document.getElementById('preview').innerHTML = md(notes[current].text);
+}
+function newNote(){
+  notes.push({title:'Новая заметка', text:'# Новая заметка\n\nПиши **markdown** здесь.'});
+  current = notes.length-1;
+  save(); render();
+}
+document.getElementById('editor').addEventListener('input', e=>{
+  if(!notes[current]) return;
+  notes[current].text = e.target.value;
+  notes[current].title = e.target.value.split('\n')[0].replace(/^#+\s*/,'') || 'Без названия';
+  document.getElementById('preview').innerHTML = md(e.target.value);
+  save();
+  document.querySelectorAll('.note').forEach((el,i)=>{
+    el.textContent = notes[i].title;
+  });
+});
+if(notes.length===0) newNote(); else render();
+</script>
+</body>
+</html>
